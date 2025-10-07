@@ -7,6 +7,7 @@
 		"dev": "wrangler dev",
 		"start": "wrangler dev",
 		"start:local": "tsx scripts/start-local.ts",
+		"local": "npm run start:local",
 		"test": "vitest",
 		"cf-typegen": "wrangler types",
 		"format": "prettier --write src",
