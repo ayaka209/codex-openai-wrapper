@@ -64,13 +64,11 @@ export type ChatMessage = {
 	}>;
 };
 
+// Tool format for upstream ChatGPT API (flattened structure)
 export type Tool = {
-	type: ToolType;
-	function: {
-		name: string;
-		description?: string;
-		parameters?: Record<string, unknown>;
-	};
+	name: string;
+	description?: string;
+	parameters?: Record<string, unknown>;
 };
 
 export type ToolDefinition = {

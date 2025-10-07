@@ -168,13 +168,11 @@ export function convertToolsChatToResponses(tools: ToolDefinition[]): Tool[] {
 		}
 		const desc = fn.description;
 		const params = fn.parameters;
+		// Convert to flattened format for upstream ChatGPT API
 		out.push({
-			type: "function",
-			function: {
-				name: name,
-				description: desc || "",
-				parameters: params || { type: "object", properties: {} }
-			}
+			name: name,
+			description: desc || "",
+			parameters: params || { type: "object", properties: {} }
 		});
 	}
 	return out;

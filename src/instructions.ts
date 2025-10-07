@@ -14,26 +14,11 @@ export async function getBaseInstructions(): Promise<string> {
 		return instructionsCache;
 	}
 
-	// Try to read from local file first
-	try {
-		const localPath = path.join(__dirname, "prompt.md");
-		if (fs.existsSync(localPath)) {
-			const instructions = fs.readFileSync(localPath, "utf-8");
-
-			// Update cache
-			instructionsCache = instructions;
-			cacheTimestamp = now;
-
-			return instructions;
-		}
-	} catch (error) {
-		console.warn("Failed to read local prompt.md:", error);
-	}
 
 	// Fallback to remote fetch (with proxy support)
 	try {
 		// In Node.js, HTTP_PROXY environment variable is automatically respected by fetch
-		const response = await fetch("https://raw.githubusercontent.com/openai/codex/refs/heads/main/codex-rs/core/prompt.md");
+		const response = await fetch("https://raw.githubusercontent.com/openai/codex/refs/heads/main/codex-rs/core/gpt_5_codex_prompt.md");
 		if (!response.ok) {
 			throw new Error(`Failed to fetch instructions: ${response.status}`);
 		}
@@ -51,6 +36,23 @@ export async function getBaseInstructions(): Promise<string> {
 		if (instructionsCache) {
 			console.warn("Using stale cache due to fetch error");
 			return instructionsCache;
+		}
+
+		// Try to read from local file first
+		try {
+			const localPath = path.join(__dirname, "gpt_5_codex_prompt.md");
+			console.warn(localPath,"Use local instructions");
+			if (fs.existsSync(localPath)) {
+				const instructions = fs.readFileSync(localPath, "utf-8");
+
+				// Update cache
+				instructionsCache = instructions;
+				cacheTimestamp = now;
+
+				return instructions;
+			}
+		} catch (error) {
+			console.warn("Failed to read localgpt_5_codex_prompt.md:", error);
 		}
 
 		// Fallback to minimal instructions if fetch fails and no cache
