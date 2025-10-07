@@ -14,7 +14,7 @@ export async function getBaseInstructions(): Promise<string> {
 		return instructionsCache;
 	}
 
-	// Try to read from local file first
+/* 	// Try to read from local file first
 	try {
 		const localPath = path.join(__dirname, "prompt.md");
 		if (fs.existsSync(localPath)) {
@@ -28,7 +28,7 @@ export async function getBaseInstructions(): Promise<string> {
 		}
 	} catch (error) {
 		console.warn("Failed to read local prompt.md:", error);
-	}
+	} */
 
 	// Fallback to remote fetch
 	try {
