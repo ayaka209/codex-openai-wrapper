@@ -24,6 +24,7 @@ export interface Env {
 	REASONING_SUMMARY?: ReasoningSummary;
 	REASONING_COMPAT?: ReasoningCompat;
 	VERBOSE?: VerboseMode;
+	NODE_TLS_REJECT_UNAUTHORIZED?: string; // Disable TLS certificate validation (use '0' for self-signed certs)
 }
 
 export type AuthTokens = {

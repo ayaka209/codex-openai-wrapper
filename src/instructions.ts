@@ -14,7 +14,7 @@ export async function getBaseInstructions(): Promise<string> {
 		return instructionsCache;
 	}
 
-/* 	// Try to read from local file first
+	// Try to read from local file first
 	try {
 		const localPath = path.join(__dirname, "prompt.md");
 		if (fs.existsSync(localPath)) {
@@ -28,10 +28,11 @@ export async function getBaseInstructions(): Promise<string> {
 		}
 	} catch (error) {
 		console.warn("Failed to read local prompt.md:", error);
-	} */
+	}
 
-	// Fallback to remote fetch
+	// Fallback to remote fetch (with proxy support)
 	try {
+		// In Node.js, HTTP_PROXY environment variable is automatically respected by fetch
 		const response = await fetch("https://raw.githubusercontent.com/openai/codex/refs/heads/main/codex-rs/core/prompt.md");
 		if (!response.ok) {
 			throw new Error(`Failed to fetch instructions: ${response.status}`);

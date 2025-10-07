@@ -9,6 +9,7 @@ const ollama = new Hono<{ Bindings: Env }>();
 
 ollama.post("/chat", openaiAuthMiddleware(), async (c) => {
 	const debugModel = c.env.DEBUG_MODEL;
+	const verbose = c.env.VERBOSE === "true";
 
 	let payload: Record<string, unknown>;
 	try {
@@ -39,7 +40,8 @@ ollama.post("/chat", openaiAuthMiddleware(), async (c) => {
 	const instructions = await getBaseInstructions();
 
 	const { response: upstream, error: errorResp } = await startUpstreamRequest(c.env, model, inputItems, {
-		instructions: instructions
+		instructions: instructions,
+		verbose: verbose
 	});
 
 	if (errorResp) {
@@ -107,6 +109,8 @@ ollama.post("/chat", openaiAuthMiddleware(), async (c) => {
 });
 
 ollama.post("/show", openaiAuthMiddleware(), async (c) => {
+	const verbose = c.env.VERBOSE === "true";
+
 	let payload: Record<string, unknown>;
 	try {
 		payload = await c.req.json();
@@ -127,7 +131,8 @@ ollama.post("/show", openaiAuthMiddleware(), async (c) => {
 		[], // No input items for /api/show
 		{
 			ollamaPath: "/api/show", // Specify the Ollama API path
-			ollamaPayload: payload // Pass the original payload
+			ollamaPayload: payload, // Pass the original payload
+			verbose: verbose
 		}
 	);
 
@@ -150,13 +155,16 @@ ollama.post("/show", openaiAuthMiddleware(), async (c) => {
 });
 
 ollama.get("/tags", async (c) => {
+	const verbose = c.env.VERBOSE === "true";
+
 	// For /api/tags, we directly proxy the request to the upstream Ollama server
 	const { response: upstream, error: errorResp } = await startUpstreamRequest(
 		c.env,
 		"", // No specific model for /api/tags
 		[], // No input items
 		{
-			ollamaPath: "/api/tags" // Specify the Ollama API path
+			ollamaPath: "/api/tags", // Specify the Ollama API path
+			verbose: verbose
 		}
 	);
 

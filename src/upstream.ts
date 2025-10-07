@@ -2,6 +2,7 @@ import { normalizeModelName } from "./utils";
 import { getRefreshedAuth, refreshAccessToken } from "./auth_kv"; // Updated import
 import { getBaseInstructions } from "./instructions";
 import { Env, InputItem, Tool } from "./types"; // Import types
+import { getProxyAgent } from "./proxyConfig";
 
 type ReasoningParam = {
 	effort?: string;
@@ -39,11 +40,25 @@ export async function startUpstreamRequest(
 		reasoningParam?: ReasoningParam;
 		ollamaPath?: string; // Added for Ollama specific paths
 		ollamaPayload?: OllamaPayload; // Added for Ollama specific payloads
+		verbose?: boolean; // Added for verbose logging
 	}
 ): Promise<{ response: Response | null; error: Response | null }> {
-	const { instructions, tools, toolChoice, parallelToolCalls, reasoningParam } = options || {};
+	const { instructions, tools, toolChoice, parallelToolCalls, reasoningParam, verbose } = options || {};
+
+	if (verbose) {
+		console.log("🔍 [VERBOSE] startUpstreamRequest called");
+		console.log("  Model:", model);
+		console.log("  Input items count:", inputItems.length);
+		console.log("  Tools count:", tools?.length || 0);
+		console.log("  Reasoning effort:", reasoningParam?.effort || "none");
+	}
 
 	const { accessToken, accountId } = await getRefreshedAuth(env);
+
+	if (verbose) {
+		console.log("  Auth method:", env.CHATGPT_ACCESS_TOKEN ? "Direct Token" : "OAuth2");
+		console.log("  Account ID:", accountId || "not set");
+	}
 
 	// Access token is required, account ID is optional
 	if (!accessToken) {
@@ -110,16 +125,84 @@ export async function startUpstreamRequest(
 		}
 	}
 
+	if (verbose) {
+		console.log("🌐 [VERBOSE] Sending upstream request");
+		console.log("  URL:", requestUrl);
+		console.log("  Method: POST");
+		console.log("  Headers:", JSON.stringify({
+			...headers,
+			Authorization: headers["Authorization"] ? `Bearer ${(headers["Authorization"] as string).substring(0, 20)}...` : undefined
+		}, null, 2));
+		console.log("  Request body preview:", requestBody.substring(0, 500) + (requestBody.length > 500 ? "..." : ""));
+		console.log("  Session ID:", sessionId || "none");
+	}
+
+	const startTime = Date.now();
+
 	try {
-		const upstreamResponse = await fetch(requestUrl, {
+		// Get proxy agent if configured (only for upstream API, not for GitHub)
+		const proxyAgent = await getProxyAgent();
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const fetchOptions: RequestInit & { dispatcher?: any } = {
 			method: "POST",
 			headers: headers,
 			body: requestBody
 			// Cloudflare Workers fetch does not have a 'timeout' option like requests.
 			// You might need to implement a custom timeout using AbortController if necessary.
-		});
+		};
+
+		// Add proxy dispatcher if available (Node.js undici-based fetch)
+		if (proxyAgent) {
+			fetchOptions.dispatcher = proxyAgent;
+			if (verbose) {
+				console.log("  Using proxy for upstream request");
+			}
+		}
+
+		let upstreamResponse = await fetch(requestUrl, fetchOptions);
 
 		// Response received
+		const duration = Date.now() - startTime;
+
+		if (verbose) {
+			console.log("✅ [VERBOSE] Received upstream response");
+			console.log("  Status:", upstreamResponse.status, upstreamResponse.statusText);
+			console.log("  Duration:", duration + "ms");
+			console.log("  Headers:", JSON.stringify(Object.fromEntries(upstreamResponse.headers.entries()), null, 2));
+
+			// Preview response body for verbose logging (if it's a stream)
+			if (upstreamResponse.body && upstreamResponse.ok) {
+				try {
+					const [previewStream, actualStream] = upstreamResponse.body.tee();
+					const reader = previewStream.getReader();
+					const decoder = new TextDecoder();
+					let previewText = "";
+					let bytesRead = 0;
+					const maxPreviewBytes = 500;
+
+					// Read first chunk for preview
+					while (bytesRead < maxPreviewBytes) {
+						const { done, value } = await reader.read();
+						if (done) break;
+						previewText += decoder.decode(value, { stream: true });
+						bytesRead += value.length;
+						if (bytesRead >= maxPreviewBytes) break;
+					}
+
+					reader.releaseLock();
+					console.log("  Response body preview:", previewText.substring(0, 500) + (previewText.length > 500 || bytesRead >= maxPreviewBytes ? "..." : ""));
+
+					// Replace the body with the actual stream for downstream processing
+					upstreamResponse = new Response(actualStream, {
+						status: upstreamResponse.status,
+						statusText: upstreamResponse.statusText,
+						headers: upstreamResponse.headers
+					});
+				} catch (previewError) {
+					console.warn("  Failed to preview response body:", previewError);
+				}
+			}
+		}
 
 		if (!upstreamResponse.ok) {
 			// Handle HTTP errors from upstream
@@ -155,11 +238,20 @@ export async function startUpstreamRequest(
 					if (sessionId) {
 						headers["session_id"] = sessionId;
 					}
-				}					const retryResponse = await fetch(requestUrl, {
+				}
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					const retryFetchOptions: RequestInit & { dispatcher?: any } = {
 						method: "POST",
 						headers: headers,
 						body: requestBody
-					});
+					};
+
+					// Use proxy for retry as well
+					if (proxyAgent) {
+						retryFetchOptions.dispatcher = proxyAgent;
+					}
+
+					const retryResponse = await fetch(requestUrl, retryFetchOptions);
 
 					if (retryResponse.ok) {
 						return { response: retryResponse, error: null };

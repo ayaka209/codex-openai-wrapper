@@ -31,6 +31,7 @@ async function main() {
 		REASONING_SUMMARY: process.env.REASONING_SUMMARY as Env["REASONING_SUMMARY"],
 		REASONING_COMPAT: process.env.REASONING_COMPAT as Env["REASONING_COMPAT"],
 		VERBOSE: process.env.VERBOSE as Env["VERBOSE"],
+		NODE_TLS_REJECT_UNAUTHORIZED: process.env.NODE_TLS_REJECT_UNAUTHORIZED,
 		KV: undefined
 	};
 
