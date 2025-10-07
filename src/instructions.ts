@@ -1,9 +1,12 @@
+import * as fs from "fs";
+import * as path from "path";
+
 // Cache for instructions
 let instructionsCache: string | null = null;
 let cacheTimestamp: number | null = null;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
 
-// Fetch instructions from Pastebin URL at runtime
+// Fetch instructions from local file or remote URL at runtime
 export async function getBaseInstructions(): Promise<string> {
 	// Check if cache is valid
 	const now = Date.now();
@@ -11,6 +14,23 @@ export async function getBaseInstructions(): Promise<string> {
 		return instructionsCache;
 	}
 
+	// Try to read from local file first
+	try {
+		const localPath = path.join(__dirname, "prompt.md");
+		if (fs.existsSync(localPath)) {
+			const instructions = fs.readFileSync(localPath, "utf-8");
+
+			// Update cache
+			instructionsCache = instructions;
+			cacheTimestamp = now;
+
+			return instructions;
+		}
+	} catch (error) {
+		console.warn("Failed to read local prompt.md:", error);
+	}
+
+	// Fallback to remote fetch
 	try {
 		const response = await fetch("https://raw.githubusercontent.com/openai/codex/refs/heads/main/codex-rs/core/prompt.md");
 		if (!response.ok) {

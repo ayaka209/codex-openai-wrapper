@@ -33,11 +33,45 @@ Choose your preferred deployment method:
 2. **Cloudflare Account** with Workers enabled
 3. **Wrangler CLI** installed (`npm install -g wrangler`)
 
-### Step 1: Get OAuth2 Credentials
+### Step 1: Authentication Setup
 
-You need OAuth2 credentials from the official OpenAI Codex CLI.
+Choose one of the two authentication methods:
 
-#### Using OpenAI Codex CLI
+#### Method A: Direct Token (Simpler, Recommended for Testing)
+
+The easiest way to get started. Simply provide your ChatGPT access token directly.
+
+1. **Get your access token**:
+   - Log in to [ChatGPT](https://chatgpt.com) in your browser
+   - Open Developer Tools (F12)
+   - Go to the **Network** tab
+   - Send a message or refresh the page
+   - Find a request to `chatgpt.com/backend-api/`
+   - Look for the `Authorization` header: `Bearer sk-proj-...`
+   - Copy the token (the part after `Bearer `)
+
+2. **Set environment variables**:
+   ```bash
+   CHATGPT_ACCESS_TOKEN=sk-proj-your-actual-token-here
+   CHATGPT_ACCOUNT_ID=user-your-account-id  # Optional
+   ```
+
+**Advantages:**
+- ✅ No OAuth setup needed
+- ✅ Works immediately
+- ✅ Simple configuration
+
+**Limitations:**
+- ⚠️ Token expires periodically (need to update manually)
+- ⚠️ No automatic refresh
+
+---
+
+#### Method B: OAuth2 (Recommended for Production)
+
+For production use with automatic token refresh.
+
+##### Using OpenAI Codex CLI
 
 1. **Install OpenAI Codex CLI**:
    ```bash
@@ -49,20 +83,20 @@ You need OAuth2 credentials from the official OpenAI Codex CLI.
    ```bash
    codex
    ```
-   
+
    Select **"Sign in with ChatGPT"** when prompted. You'll need a Plus, Pro, or Team ChatGPT account to access the latest models, including gpt-5, at no extra cost to your plan.
 
 3. **Complete authentication**:
-   
+
    The login process will start a server on `localhost:1455`. Open the provided URL in your browser to complete the authentication flow.
 
 4. **Locate the credentials file**:
-   
+
    **Windows:**
    ```
    C:\Users\USERNAME\.codex\auth.json
    ```
-   
+
    **macOS/Linux:**
    ```
    ~/.codex/auth.json
@@ -135,17 +169,32 @@ kv_namespaces = [
 
 ### Step 3: Environment Setup
 
-Create a `.dev.vars` file:
+Create a `.dev.vars` file with **one** of the authentication methods:
+
+**Option A: Direct Token (Simpler)**
 ```bash
-# Required: API key for client authentication
+# Required: API key for client authentication (protects your server)
+OPENAI_API_KEY=sk-your-secret-api-key-here
+
+# Required: Direct ChatGPT authentication
+CHATGPT_ACCESS_TOKEN=sk-proj-your-chatgpt-access-token-here
+CHATGPT_ACCOUNT_ID=user-your-account-id  # Optional
+
+# Optional: ChatGPT API endpoint (with default)
+CHATGPT_RESPONSES_URL=https://chatgpt.com/backend-api/responses
+```
+
+**Option B: OAuth2 (Auto-refresh)**
+```bash
+# Required: API key for client authentication (protects your server)
 OPENAI_API_KEY=sk-your-secret-api-key-here
 
 # Required: Codex CLI authentication JSON
 OPENAI_CODEX_AUTH={"tokens":{"id_token":"eyJ...","access_token":"sk-proj-...","refresh_token":"rft_...","account_id":"user-..."},"last_refresh":"2024-01-15T10:30:00.000Z"}
 
-# Required: ChatGPT API configuration
-CHATGPT_LOCAL_CLIENT_ID=your_client_id_here
-CHATGPT_RESPONSES_URL=https://chatgpt.com/backend-api/codex/responses
+# Optional: ChatGPT API configuration (with defaults)
+CHATGPT_LOCAL_CLIENT_ID=app_EMoamEEZ73f0CkXaXp7hrann
+CHATGPT_RESPONSES_URL=https://chatgpt.com/backend-api/responses
 
 # Optional: Ollama integration
 OLLAMA_API_URL=http://localhost:11434
@@ -223,9 +272,23 @@ The service will be available at `http://localhost:8787`
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `OPENAI_API_KEY` | ✅ | API key for client authentication |
+| `OPENAI_API_KEY` | ✅ | API key for client authentication (protects your proxy server) |
+
+#### Authentication Methods (Choose One)
+
+**Method A: Direct Token (Simpler)**
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `CHATGPT_ACCESS_TOKEN` | ✅ | Direct ChatGPT access token (Bearer token) |
+| `CHATGPT_ACCOUNT_ID` | ⚪ | ChatGPT account ID (optional, auto-detected from token) |
+
+**Method B: OAuth2 (Auto-refresh)**
+
+| Variable | Required | Description |
+|----------|----------|-------------|
 | `OPENAI_CODEX_AUTH` | ✅ | OAuth2 credentials JSON from Codex CLI |
-| `CHATGPT_LOCAL_CLIENT_ID` | ✅ | ChatGPT client ID |
+| `CHATGPT_LOCAL_CLIENT_ID` | ✅ | ChatGPT client ID (default: `app_EMoamEEZ73f0CkXaXp7hrann`) |
 | `CHATGPT_RESPONSES_URL` | ✅ | ChatGPT API endpoint URL |
 
 #### Reasoning & Intelligence
@@ -244,10 +307,22 @@ The service will be available at `http://localhost:8787`
 | `DEBUG_MODEL` | - | Override model for debugging purposes |
 | `VERBOSE` | `false` | Enable detailed debug logging |
 
-#### Authentication Security
+#### Authentication Method Comparison
 
-- When `OPENAI_API_KEY` is set, all `/v1/*` and `/api/*` endpoints require authentication
+| Feature | Direct Token | OAuth2 |
+|---------|--------------|--------|
+| **Setup Complexity** | ⭐ Simple | ⭐⭐⭐ Complex |
+| **Token Refresh** | ❌ Manual | ✅ Automatic |
+| **Best For** | Testing, Development | Production |
+| **Token Lifetime** | Until expired | Long-term (auto-refresh) |
+| **Prerequisites** | Browser access to ChatGPT | Codex CLI installation |
+
+#### Client Authentication Security
+
+- `OPENAI_API_KEY` protects **your proxy server** from unauthorized access
+- When set, all `/v1/*` and `/api/*` endpoints require authentication
 - Clients must include the header: `Authorization: Bearer <your-api-key>`
+- This is **different** from the ChatGPT authentication (handled by `CHATGPT_ACCESS_TOKEN` or `OPENAI_CODEX_AUTH`)
 - Recommended format: `sk-` followed by a random string (e.g., `sk-1234567890abcdef...`)
 - Without this variable, endpoints are publicly accessible (not recommended for production)
 
@@ -287,7 +362,7 @@ Content-Type: application/json
       "content": "You are a helpful assistant."
     },
     {
-      "role": "user", 
+      "role": "user",
       "content": "Explain quantum computing in simple terms"
     }
   ],
@@ -302,7 +377,7 @@ Enable enhanced reasoning capabilities:
   "model": "gpt-4",
   "messages": [
     {
-      "role": "user", 
+      "role": "user",
       "content": "Solve this step by step: What is the derivative of x^3 + 2x^2 - 5x + 3?"
     }
   ],
@@ -405,7 +480,7 @@ The wrapper supports OpenAI-compatible tool calling (function calling) with seam
 ```javascript
 const response = await fetch('/v1/chat/completions', {
   method: 'POST',
-  headers: { 
+  headers: {
     'Content-Type': 'application/json',
     'Authorization': 'Bearer sk-your-api-key-here'
   },
@@ -423,9 +498,9 @@ const response = await fetch('/v1/chat/completions', {
           parameters: {
             type: 'object',
             properties: {
-              location: { 
-                type: 'string', 
-                description: 'City name' 
+              location: {
+                type: 'string',
+                description: 'City name'
               },
               unit: {
                 type: 'string',
@@ -593,7 +668,7 @@ The wrapper provides sophisticated reasoning capabilities with multiple configur
 
 #### Effort Levels
 - **`minimal`**: Basic reasoning with minimal token overhead
-- **`medium`**: Balanced reasoning for most use cases  
+- **`medium`**: Balanced reasoning for most use cases
 - **`high`**: Deep reasoning for complex problems
 
 #### Summary Options
@@ -753,7 +828,7 @@ npm run dev
 
 ```bash
 npm run dev          # Start development server
-npm run deploy       # Deploy to Cloudflare Workers  
+npm run deploy       # Deploy to Cloudflare Workers
 npm run lint         # Run ESLint and TypeScript checks
 npm run format       # Format code with Prettier
 npm test            # Run test suite

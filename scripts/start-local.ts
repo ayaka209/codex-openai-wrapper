@@ -23,6 +23,8 @@ async function main() {
 		OPENAI_CODEX_AUTH: getEnvVar("OPENAI_CODEX_AUTH", "{}"),
 		CHATGPT_LOCAL_CLIENT_ID: getEnvVar("CHATGPT_LOCAL_CLIENT_ID", "app_EMoamEEZ73f0CkXaXp7hrann"),
 		CHATGPT_RESPONSES_URL: getEnvVar("CHATGPT_RESPONSES_URL", "https://chatgpt.com/backend-api/responses"),
+		CHATGPT_ACCESS_TOKEN: process.env.CHATGPT_ACCESS_TOKEN,
+		CHATGPT_ACCOUNT_ID: process.env.CHATGPT_ACCOUNT_ID,
 		OLLAMA_API_URL: process.env.OLLAMA_API_URL,
 		DEBUG_MODEL: process.env.DEBUG_MODEL,
 		REASONING_EFFORT: process.env.REASONING_EFFORT as Env["REASONING_EFFORT"],

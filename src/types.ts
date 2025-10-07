@@ -16,6 +16,8 @@ export interface Env {
 	CHATGPT_LOCAL_CLIENT_ID: string;
 	CHATGPT_RESPONSES_URL: string;
 	OPENAI_CODEX_AUTH: string;
+	CHATGPT_ACCESS_TOKEN?: string; // Direct access token (bypasses OAuth)
+	CHATGPT_ACCOUNT_ID?: string; // Account ID for direct token auth
 	OLLAMA_API_URL?: string;
 	DEBUG_MODEL?: string;
 	REASONING_EFFORT?: ReasoningEffort;

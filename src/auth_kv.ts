@@ -34,6 +34,14 @@ function parseJwtClaims(token: string): JwtClaims | null {
 export async function getEffectiveChatgptAuth(
 	env: Env
 ): Promise<{ accessToken: string | null; accountId: string | null }> {
+	// Check for direct token first (bypasses OAuth)
+	if (env.CHATGPT_ACCESS_TOKEN) {
+		return {
+			accessToken: env.CHATGPT_ACCESS_TOKEN,
+			accountId: env.CHATGPT_ACCOUNT_ID || null
+		};
+	}
+
 	if (!env.OPENAI_CODEX_AUTH) {
 		return { accessToken: null, accountId: null };
 	}
@@ -142,6 +150,14 @@ export async function refreshAccessToken(env: Env): Promise<TokenData | null> {
 }
 
 export async function getRefreshedAuth(env: Env): Promise<{ accessToken: string | null; accountId: string | null }> {
+	// If using direct token, skip refresh logic
+	if (env.CHATGPT_ACCESS_TOKEN) {
+		return {
+			accessToken: env.CHATGPT_ACCESS_TOKEN,
+			accountId: env.CHATGPT_ACCOUNT_ID || null
+		};
+	}
+
 	// First try to get current auth
 	const currentAuth = await getEffectiveChatgptAuth(env);
 

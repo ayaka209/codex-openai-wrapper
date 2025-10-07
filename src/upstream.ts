@@ -45,15 +45,14 @@ export async function startUpstreamRequest(
 
 	const { accessToken, accountId } = await getRefreshedAuth(env);
 
-	// KV token check (minimal logging)
-
-	if (!accessToken || !accountId) {
+	// Access token is required, account ID is optional
+	if (!accessToken) {
 		return {
 			response: null,
 			error: new Response(
 				JSON.stringify({
 					error: {
-						message: "Missing ChatGPT credentials. Run 'codex login' first"
+						message: "Missing ChatGPT access token. Set CHATGPT_ACCESS_TOKEN or run 'codex login'"
 					}
 				}),
 				{ status: 401, headers: { "Content-Type": "application/json" } }
@@ -102,7 +101,9 @@ export async function startUpstreamRequest(
 	if (!isOllamaRequest) {
 		headers["Authorization"] = `Bearer ${accessToken}`;
 		headers["Accept"] = "text/event-stream";
-		headers["chatgpt-account-id"] = accountId;
+		if (accountId) {
+			headers["chatgpt-account-id"] = accountId;
+		}
 		headers["OpenAI-Beta"] = "responses=experimental";
 		if (sessionId) {
 			headers["session_id"] = sessionId;
@@ -143,17 +144,18 @@ export async function startUpstreamRequest(
 						"Content-Type": "application/json"
 					};
 
-					if (!isOllamaRequest) {
-						headers["Authorization"] = `Bearer ${refreshedTokens.access_token}`;
-						headers["Accept"] = "text/event-stream";
-						headers["chatgpt-account-id"] = refreshedTokens.account_id || accountId;
-						headers["OpenAI-Beta"] = "responses=experimental";
-						if (sessionId) {
-							headers["session_id"] = sessionId;
-						}
+				if (!isOllamaRequest) {
+					headers["Authorization"] = `Bearer ${refreshedTokens.access_token}`;
+					headers["Accept"] = "text/event-stream";
+					const retryAccountId = refreshedTokens.account_id || accountId;
+					if (retryAccountId) {
+						headers["chatgpt-account-id"] = retryAccountId;
 					}
-
-					const retryResponse = await fetch(requestUrl, {
+					headers["OpenAI-Beta"] = "responses=experimental";
+					if (sessionId) {
+						headers["session_id"] = sessionId;
+					}
+				}					const retryResponse = await fetch(requestUrl, {
 						method: "POST",
 						headers: headers,
 						body: requestBody
