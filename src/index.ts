@@ -2,9 +2,11 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import openai from "./routes/openai"; // Import the openai router
 import ollama from "./routes/ollama"; // Import the ollama router
+import { envOverrideMiddleware } from "./middleware/envOverrideMiddleware";
 
 const app = new Hono();
 
+app.use("*", envOverrideMiddleware());
 app.use(
 	"*",
 	cors({
